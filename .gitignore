@@ -1,0 +1,10 @@
+*~
+build/*
+lib/*
+ext/*
+src/RLPlus.tokens
+src/RLPlusLexer.*
+src/RLPlusParser.*
+*.setup
+src/generated-c/
+src/generated-cxx/

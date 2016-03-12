@@ -1,0 +1,2 @@
+CREATE RELATION l WITH COLUMNS (INTEGER),
+WHILE [(l_0 < 5)] DO (SUM [l_0,1] FROM (l) WHERE [(l_0 >= 0)] AS l)

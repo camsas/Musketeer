@@ -1,0 +1,6 @@
+package musketeer;
+
+message JobRun {
+  required string framework = 1;
+  required string job_name = 2;
+}

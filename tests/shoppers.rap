@@ -1,0 +1,4 @@
+CREATE RELATION shoplogs{{size}} WITH COLUMNS (INTEGER, INTEGER, INTEGER, INTEGER),
+SELECT [shoplogs{{size}}_0, shoplogs{{size}}_1, shoplogs{{size}}_2, shoplogs{{size}}_3] FROM (shoplogs{{size}}) WHERE [(shoplogs{{size}}_1 = 1)] AS us_shoplogs,
+AGG [us_shoplogs_3, +] FROM (us_shoplogs) GROUP BY [us_shoplogs_0] AS spenders,
+SELECT [spenders_0, spenders_1] FROM (spenders) WHERE [(spenders_1 > 12000)] AS big_spenders

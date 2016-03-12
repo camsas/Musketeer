@@ -1,0 +1,1 @@
+{{OUTPUT_REL}} = {{LEFT_REL}}.Intersect({{RIGHT_REL}});

@@ -1,0 +1,332 @@
+import org.apache.spark.SparkContext
+import SparkContext._
+import java.lang.Number
+import java.lang.Integer
+import java.lang.Double
+
+
+object iter_tmp {
+ def main(args:Array[String]) {
+  System.setProperty("spark.default.parallelism", "384")
+  // System.setProperty("spark.storage.memoryFraction", "0.5")
+  System.setProperty("spark.worker.timeout", "60000")
+  System.setProperty("spark.akka.timeout", "60000")
+  System.setProperty("spark.storage.blockManagerHeartBeatMs", "60000")
+  System.setProperty("spark.akka.storage.retry.wait", "60000")
+  System.setProperty("spark.akka.frameSize", "10000")
+  val sc = new SparkContext( "spark://freestyle:7077","main_spark",
+  "/home/icg27/spark-0.9.0-incubating/",Seq("/home/icg27/iter_tmp_code/iter_tmp.jar"));
+//   sc.addSparkListener(new StatsReportListener())
+  var com_edges = sc.textFile("hdfs://10.11.12.61:8020/home/icg27/com_edges/");
+
+  var iter = sc.textFile("hdfs://10.11.12.61:8020/home/icg27/iter/");
+
+  var lj_edges = sc.textFile("hdfs://10.11.12.61:8020/home/icg27/lj_edges/");
+
+  var lj_pr = sc.textFile("hdfs://10.11.12.61:8020/home/icg27/lj_pr/");
+
+  var edges:org.apache.spark.rdd.RDD[String] =  null.asInstanceOf[org.apache.spark.rdd.RDD[String]]
+  var edgescnt:org.apache.spark.rdd.RDD[String] =  null.asInstanceOf[org.apache.spark.rdd.RDD[String]]
+  var edgespr:org.apache.spark.rdd.RDD[String] =  null.asInstanceOf[org.apache.spark.rdd.RDD[String]]
+  var iter_tmp:org.apache.spark.rdd.RDD[String] =  null.asInstanceOf[org.apache.spark.rdd.RDD[String]]
+  var links:org.apache.spark.rdd.RDD[String] =  null.asInstanceOf[org.apache.spark.rdd.RDD[String]]
+  var node_cnt:org.apache.spark.rdd.RDD[String] =  null.asInstanceOf[org.apache.spark.rdd.RDD[String]]
+  var output_while:org.apache.spark.rdd.RDD[String] =  null.asInstanceOf[org.apache.spark.rdd.RDD[String]]
+  var pr1:org.apache.spark.rdd.RDD[String] =  null.asInstanceOf[org.apache.spark.rdd.RDD[String]]
+  var pr2:org.apache.spark.rdd.RDD[String] =  null.asInstanceOf[org.apache.spark.rdd.RDD[String]]
+  var rankcnt:org.apache.spark.rdd.RDD[String] =  null.asInstanceOf[org.apache.spark.rdd.RDD[String]]
+  val diff = lj_edges.subtract(com_edges);
+  edges = lj_edges.subtract(diff);
+  val filtered_node_cnt = edges
+  val group_by_edges = Array(0)
+  if (group_by_edges(0) == -1) {
+    val result = filtered_node_cnt.count()
+    var st:String = "ALL " + result
+    node_cnt = sc.makeRDD(Seq(st), 1)
+  } else {
+    val input1_node_cnt = filtered_node_cnt.groupBy((line:String) => {
+      var splitted:Array[String] = line.split(" ");
+      var key:String = ""
+      for (val entry <- group_by_edges) {
+      	  key += splitted(entry) + " "
+      }
+      key.trim()
+    });
+    node_cnt = input1_node_cnt.map((input:(String, Seq[String])) => {
+	     input._1 + " " + (input._2.length.toLong).toString()
+    });
+  }
+  val input1_edgescnt = edges.map((line:String) => {
+    var splitted:Array[String] = line.split(" ");
+    (splitted(0),line)
+  });
+  val input2_edgescnt = node_cnt.map((line:String) => {
+    var splits:Array[String] = line.split(" ");
+    (splits(0),line)
+  });
+  edgescnt = input1_edgescnt.join(input2_edgescnt).values.map((input:(String, String)) => {
+    var splitted:Array[String] = input._2.split(" ");
+    var i = 0
+    var result = ""
+    for (val entry <- splitted) {
+      if (i != 0) {
+        result += entry + " "
+      }
+      i += 1
+    }
+    input._1.trim() + " " + result.trim()
+  });
+    var iter_cond:Array[String] = iter.first().split(" ");
+  val input1_edgespr = edgescnt.map((line:String) => {
+    var splitted:Array[String] = line.split(" ");
+    (splitted(0),line)
+  });
+
+  while ((Integer.valueOf(iter_cond(0)) < 5)) {
+  val input2_edgespr = lj_pr.map((line:String) => {
+    var splits:Array[String] = line.split(" ");
+    (splits(0),line)
+  });
+  val filtered_rankcnt = input1_edgespr.join(input2_edgespr).values.map((input:(String, String)) => {
+    var splitted:Array[String] = input._2.split(" ");
+    var i = 0
+    var result = ""
+    for (val entry <- splitted) {
+      if (i != 0) {
+        result += entry + " "
+      }
+      i += 1
+    }
+    input._1.trim() + " " + result.trim()
+  });
+  var left_index_rankcnt = 3
+  var right_index_rankcnt = 2
+  rankcnt = filtered_rankcnt.map((line:String) => {
+    var edgespr:Array[String] = line.split(" ")
+    var new_val:String = ""
+    var tokened:String = ""
+    var index:Int = 0
+    if (left_index_rankcnt == -1) {
+      index = right_index_rankcnt
+    } else {
+      index = left_index_rankcnt
+    }
+    var ln = edgespr.length - 1
+    for(i<-0 to ln) {
+      if (i == index) {
+        if (left_index_rankcnt == -1) {
+          new_val = String.valueOf(1 / Integer.valueOf(edgespr(right_index_rankcnt)))
+        } else {
+          if (right_index_rankcnt == -1) {
+            new_val = String.valueOf(Double.valueOf(edgespr(left_index_rankcnt)) / 1)
+          } else {
+            new_val = String.valueOf(Double.valueOf(edgespr(left_index_rankcnt)) /
+              Integer.valueOf(edgespr(right_index_rankcnt)))
+          }
+        }
+        tokened += new_val + " "
+      } else {
+        tokened += edgespr(i) + " "
+      }
+    }
+    tokened.trim();
+  });
+  links = rankcnt.map((line:String) => {
+    val cols = Array(1,3);
+    var tokened:String = "";
+    var splitted:Array[String] = line.split(" ");
+    var i = 0;
+    for(val entry <- cols) {
+      tokened += splitted(entry) + " " ;
+    }
+    tokened.trim()
+   });
+  val group_by_pr1 = Array(0)
+  if (group_by_pr1(0) == -1) {
+    val operator_pr1 = '+' match {
+      case '+' => {
+        val accum_pr1 = sc.accumulator(0.0)
+        links.foreach((line:String) => {
+          var links:Array[String] = line.split(" ")
+          if (true) {
+            accum_pr1 += (links(1)).toDouble
+          }
+        })
+        val st = "ALL " + accum_pr1.value.toString()
+       pr1 = sc.makeRDD(Seq(st), 1)
+     }
+     // Because of lack of * accumulator in Spark we had to do a nasty hack.
+     // We use the reduce function which takes two strings as input.
+     // If the line is ALL value then we know it's a previously computed result.
+      case '*' => {
+        var accum_pr1 = links.reduce((line1:String, line2:String) => {
+          var links:Array[String] = line1.split(" ")
+          var left = false
+          var left_value : Double = 0
+          if (links(0).equals("ALL")) {
+            left = true
+            left_value = Double.valueOf(links(1))
+          } else {
+            if (true) {
+              left = true
+              left_value = Double.valueOf(links(1))
+            }
+          }
+          var right = false
+          var right_value : Double = 0
+          links = line2.split(" ")
+          if (links(0).equals("ALL")) {
+            right = true
+            right_value = Double.valueOf(links(1))
+          } else {
+            if (true) {
+              right = true
+              right_value = Double.valueOf(links(1))
+            }
+          }
+          var reslt = ""
+          if (right && left) {
+            reslt = "ALL " + String.valueOf(left_value * right_value)
+          } else {
+            if (right) {
+              reslt = "ALL " + String.valueOf(right_value)
+            } else {
+              if (left) {
+                reslt = "ALL " + String.valueOf(left_value)
+              } else {
+                reslt = "ALL 1"
+              }
+            }
+          }
+          reslt
+        })
+        sc.makeRDD(Seq(accum_pr1), 1)
+      }
+    }
+  } else {
+    val groupedInput = links.map((line:String) => {
+      var splitted:Array[String] = line.split(" ");
+      var key:String = ""
+      for (val entry <-group_by_pr1) {
+     	  key += splitted(entry) + " "
+      }
+      (key.trim(), Double.valueOf(splitted(1)))
+    });
+    val operator = '+' match {
+      case '+' =>
+        pr1 = groupedInput.reduceByKey(_ + _).map((input:(String,Double)) =>	{
+      	  input._1 + " " + input._2.toString()
+        })
+      case '*' =>
+    	  pr1 = groupedInput.reduceByKey(_*_).map((input:(String,Double))	=> {
+          input._1 + " " + input._2.toString()
+        })
+    }
+  }
+  var left_index_pr2 = -1
+  var right_index_pr2 = 1
+  pr2 = pr1.map((line:String) => {
+    var pr1:Array[String] = line.split(" ")
+    var new_val:String = ""
+    var tokened:String = ""
+    var index:Int = 0
+    if (left_index_pr2 == -1) {
+      index = right_index_pr2
+    } else {
+      index = left_index_pr2
+    }
+    var ln = pr1.length - 1
+    for (i<-0 to ln) {
+      if (i == index) {
+        if (left_index_pr2 == -1) {
+          new_val = String.valueOf(Double.valueOf(pr1(right_index_pr2)) * 0.85)
+        } else {
+          if (right_index_pr2 == -1) {
+            new_val = String.valueOf(Integer.valueOf(pr1(left_index_pr2)) * 0.85)
+          } else {
+            new_val = String.valueOf(Integer.valueOf(pr1(left_index_pr2)) *
+              Double.valueOf(pr1(right_index_pr2)))
+          }
+        }
+        tokened += new_val + " "
+      } else {
+        tokened += pr1(i) + " "
+      }
+    }
+    tokened.trim()
+  });
+  var left_index_lj_pr = -1
+  var right_index_lj_pr = 1
+  lj_pr = pr2.map((line:String) => {
+    var pr2:Array[String] = line.split(" ")
+    var new_val:String = ""
+    var tokened:String = ""
+    var index:Int = 0
+    if (left_index_lj_pr == -1) {
+      index = right_index_lj_pr
+    } else {
+      index = left_index_lj_pr
+    }
+    var ln = pr2.length - 1
+    for (i<-0 to ln) {
+      if (i == index) {
+        if (left_index_lj_pr == -1) {
+          new_val = String.valueOf(Double.valueOf(pr2(right_index_lj_pr)) + 0.15)
+        } else {
+          if (right_index_lj_pr == -1) {
+            new_val = String.valueOf(Double.valueOf(pr2(left_index_lj_pr)) + 0.15)
+          } else {
+            new_val = String.valueOf(Integer.valueOf(pr2(left_index_lj_pr)) +
+              Double.valueOf(pr2(right_index_lj_pr)));
+          }
+        }
+        tokened += new_val + " "
+      } else {
+        tokened += pr2(i) + " "
+      }
+    }
+    tokened.trim()
+  });
+  var left_index_iter_tmp = 0
+  var right_index_iter_tmp = -1
+  iter_tmp = iter.map((line:String) => {
+    var iter:Array[String] = line.split(" ")
+    var new_val:String = ""
+    var tokened:String = ""
+    var index:Int = 0
+    if (left_index_iter_tmp == -1) {
+      index = right_index_iter_tmp
+    } else {
+      index = left_index_iter_tmp
+    }
+    var ln = iter.length - 1
+    for (i<-0 to ln) {
+      if (i == index) {
+        if (left_index_iter_tmp == -1) {
+          new_val = String.valueOf(Integer.valueOf(iter(right_index_iter_tmp)) + 1)
+        } else {
+          if (right_index_iter_tmp == -1) {
+            new_val = String.valueOf(Integer.valueOf(iter(left_index_iter_tmp)) + 1)
+          } else {
+            new_val = String.valueOf(Integer.valueOf(iter(left_index_iter_tmp)) +
+              Integer.valueOf(iter(right_index_iter_tmp)));
+          }
+        }
+        tokened += new_val + " "
+      } else {
+        tokened += iter(i) + " "
+      }
+    }
+    tokened.trim()
+  });
+  iter = iter_tmp
+  iter_cond = iter.first().split(" ");
+
+}
+
+  lj_pr.saveAsTextFile("hdfs://10.11.12.61:8020/home/icg27/lj_pr/");
+  iter_tmp.saveAsTextFile("hdfs://10.11.12.61:8020/home/icg27/iter_tmp/");
+
+    System.exit(0)
+}
+}

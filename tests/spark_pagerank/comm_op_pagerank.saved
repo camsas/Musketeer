@@ -1,0 +1,93 @@
+import org.apache.spark.SparkContext
+import SparkContext._
+import java.lang.Number
+import java.lang.Integer
+
+object PageRank {
+
+  private def parseLineToIntDouble(line: String): (Int, Double) = {
+    val splitted = line.split(" ")
+    val key = splitted(0).toInt
+    val dest = splitted(1).toDouble
+    (key, dest)
+  }
+
+  private def parseLineToIntInt(line: String): (Int, Int) = {
+    val splitted = line.split(" ")
+    val key = splitted(0).toInt
+    val dest = splitted(1).toInt
+    (key, dest)
+  }
+
+  def main(args:Array[String]) {
+    val edges_dir = args(0)
+    val vertices_dir = args(1)
+    val comm_dir = args(2)
+    val output_dir = args(3)
+    val paralelism = args(4)
+
+    System.setProperty("spark.default.parallelism", paralelism)
+    System.setProperty("spark.worker.timeout", "60000")
+    System.setProperty("spark.akka.timeout", "60000")
+    System.setProperty("spark.storage.blockManagerHeartBeatMs", "60000")
+    System.setProperty("spark.akka.storage.retry.wait", "60000")
+    System.setProperty("spark.akka.frameSize", "10000")
+
+    val sc = new SparkContext("spark://freestyle:7077", "main_spark",
+      "/home/icg27/spark-0.9.0-incubating/",
+      Seq("/home/icg27/Musketeer/tests/spark_pagerank/target/scala-2.10/pagerank_2.10-1.0.jar"))
+
+    val NUM_OF_ITERATIONS = 5
+
+    val input_edges = sc.textFile("hdfs://10.11.12.61:8020" + edges_dir)
+    val input_pr = sc.textFile("hdfs://10.11.12.61:8020" + vertices_dir)
+    val input_comm = sc.textFile("hdfs://10.11.12.61:8020" + comm_dir)
+
+    val diff = input_edges.subtract(input_comm)
+    val lj_edges:org.apache.spark.rdd.RDD[(Int, Int)] = input_edges.subtract(diff).map(parseLineToIntInt)
+    var lj_pr:org.apache.spark.rdd.RDD[(Int, Double)] = input_pr.map(parseLineToIntDouble)
+
+    val node_cnt:org.apache.spark.rdd.RDD[(Int, Int)] = lj_edges.map({
+      case (src, dst) =>
+        (src, 1)
+      case _ =>
+        (0, 0)
+    }).reduceByKey(_+_)
+    val edgescnt:org.apache.spark.rdd.RDD[(Int, (Int, Int))] = lj_edges.join(node_cnt)
+
+    for (i <- 1 to NUM_OF_ITERATIONS) {
+      val lj_edgespr:org.apache.spark.rdd.RDD[(Int, ((Int, Int), Double))] = edgescnt.join(lj_pr)
+
+      val rankcnt:org.apache.spark.rdd.RDD[(Int, ((Int, Int), Double))] = lj_edgespr.map({
+        case (src, ((dst, cnt), pr)) =>
+          (src, ((dst, cnt), pr / cnt))
+        case _ =>
+          (0, ((0, 0), 1.0))
+      })
+
+      val links:org.apache.spark.rdd.RDD[(Int, Double)] = rankcnt.map({
+        case (src, ((dst, cnt), pr)) =>
+          (dst, pr)
+        case _ =>
+          (0, 1.0)
+      })
+
+      val pr1:org.apache.spark.rdd.RDD[(Int, Double)] = links.reduceByKey(_+_)
+      val pr2:org.apache.spark.rdd.RDD[(Int, Double)] = pr1.map({
+        case (node, pr) =>
+          (node, pr * 0.85)
+        case _ =>
+          (0, 1.0)
+      })
+      lj_pr = pr2.map({
+        case (node, pr) =>
+          (node, pr + 0.15)
+        case _ =>
+          (0, 1.0)
+      })
+    }
+    lj_pr.saveAsTextFile("hdfs://10.11.12.61:8020" + output_dir)
+    System.exit(0)
+  }
+
+}

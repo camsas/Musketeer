@@ -1,0 +1,1 @@
+{{OUTPUT_REL}} = {{LEFT_REL}}.Concat({{RIGHT_REL}});

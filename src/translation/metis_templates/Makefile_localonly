@@ -1,0 +1,38 @@
+METIS_ROOT = {{METIS_ROOT}}
+METIS_BUILD = $(METIS_ROOT)/obj
+
+OBJ_DIR = .
+CXX = clang++
+
+JAVA_HOME=/usr/lib/jvm/java-7-openjdk-amd64/
+
+BINS = {{CLASS_NAME}}_bin
+LIBS += -L$(METIS_BUILD) -lmetis -ldl -lnuma -lc -lm -lpthread -ldl -lglog -ltcmalloc_and_profiler
+LDEPS := $(METIS_BUILD)/libmetis.a
+CPPFLAGS += -I$(METIS_ROOT)/lib -std=gnu++0x
+OBJS = {{CLASS_NAME}}.o
+OBJ_BIN = $(addprefix $(OBJ_DIR)/, $(BINS))
+
+# stupid workaround for clang 3.2 + GCC 4.7 STL
+CPPFLAGS += -D__float128=void
+
+DEPSDIR := .deps
+DEPCFLAGS = -MD -MF $(DEPSDIR)/$*.d -MP
+MAXCPUS := $(shell grep -c processor /proc/cpuinfo)
+
+#OPTFLAGS := -g -O0 -fno-omit-frame-pointer
+OPTFLAGS := -O3 -fno-omit-frame-pointer
+
+CPPFLAGS  += -D_GNU_SOURCE -Wall $(OPTFLAGS) -include $(METIS_ROOT)/config.h \
+           -DJTLS=__thread -DJSHARED_ATTR=  \
+           -DJOS_CLINE=64 -DCACHE_LINE_SIZE=64 \
+           -DJOS_NCPU=$(MAXCPUS) -D__STDC_FORMAT_MACROS
+
+CPPFLAGS += -DUSE_HDFS=0
+
+all: $(OBJ_BIN)
+
+# Make object file (generic).
+$(OBJ_DIR)/%_bin: $(OBJ_DIR)/%.cc $(LDEPS)
+	@echo "MAKE     $@"
+	$(CXX) $(CFLAGS) $(CPPFLAGS) $(OPTFLAGS) -o $@ $< $(LIBS)

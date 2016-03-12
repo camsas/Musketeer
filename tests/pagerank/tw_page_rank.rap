@@ -1,0 +1,13 @@
+CREATE RELATION tw_edges WITH COLUMNS (INTEGER, INTEGER),
+CREATE RELATION tw_pr WITH COLUMNS (INTEGER, DOUBLE),
+CREATE RELATION iter WITH COLUMNS (INTEGER),
+COUNT [tw_edges_1] FROM (tw_edges) GROUP BY [tw_edges_0] AS node_cnt,
+(tw_edges) JOIN (node_cnt) ON tw_edges_0 AND node_cnt_0 AS edgescnt,
+WHILE [(iter_0 < 5)] DO (
+  (edgescnt) JOIN (tw_pr) ON edgescnt_0 AND tw_pr_0 AS edgespr,
+  DIV [edgespr_3, edgespr_2] FROM (edgespr) AS rankcnt,
+  PROJECT [rankcnt_1, rankcnt_3] FROM (rankcnt) AS links,
+  AGG [links_1, +] FROM (links) GROUP BY [links_0] AS pr1,
+  MUL [0.85, pr1_1] FROM (pr1) AS pr2,
+  SUM [0.15, pr2_1] FROM (pr2) AS tw_pr,
+  SUM [iter_0,1] FROM (iter) AS iter)

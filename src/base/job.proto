@@ -1,0 +1,8 @@
+package musketeer;
+
+message Job {
+  required string code = 1;
+  required string force_framework = 2;
+  required string operator_merge = 3;
+  required string frameworks = 4;
+}

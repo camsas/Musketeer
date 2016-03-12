@@ -1,0 +1,1 @@
+BLACK BOX Hadoop /home/icg27/g_code/g.jar AS g WITH COLUMNS (INTEGER, INTEGER)

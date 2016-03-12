@@ -1,0 +1,1 @@
+{{OUTPUT_REL}} = {{INPUT_REL}}.Distinct();

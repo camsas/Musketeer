@@ -1,0 +1,2 @@
+CREATE RELATION left_input16 WITH COLUMNS (INTEGER, INTEGER),
+PROJECT [left_input16_0] FROM (left_input16) AS u

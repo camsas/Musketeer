@@ -1,0 +1,13 @@
+{{EDGES}}
+{{NODES}}
+{{ITER}}
+
+{{OUTNUM}}
+
+WHILE [{{STOP_COND}}] DO (
+ ({{NODE_NAME}}) JOIN ({{EDGE_NAME}}{{OUT_NAME}}) ON {{NODE_NAME}}_0 AND {{EDGE_NAME}}{{OUT_NAME}}_0 AS {{EDGE_NAME}}{{NODE_NAME}},
+ {{SCATTER}}
+ PROJECT [scatter_0, scatter_1] FROM (scatter)  AS gather0,
+ {{GATHER}}
+ {{APPLY}}
+)
