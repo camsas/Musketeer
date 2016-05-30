@@ -11,10 +11,10 @@ EXT_DIR=${PWD}
 # are packaged, so we prompt the user to allow us to install them.
 # Currently, we support Ubuntu and Debian.
 BASE_PKGS="wget subversion autoconf zlib1g-dev python-pip libcurl4-gnutls-dev libtbb-dev libevent-dev libnuma-dev libjansson-dev"
-#BOOST_PKGS="libboost-math1.53-dev libboost-system1.53-dev libboost-thread1.53-dev libboost-regex1.53-dev libboost-filesystem1.53-dev libboost-program-options1.53-dev libboost-iostreams1.53-dev mpich2"
+BOOST_PKGS="libboost-math-dev libboost-system-dev libboost-thread-dev libboost-regex-dev libboost-filesystem-dev libboost-program-options-dev libboost-iostreams-dev mpich2"
 ANTLR_PKGS="antlr3 libantlr3c-dev"
 CTEMPLATE_PKGS="libctemplate-dev"
-GOOGLE_PKGS="libprotobuf-dev libprotobuf-c0-dev protobuf-c-compiler libgoogle-perftools-dev protobuf-compiler"
+GOOGLE_PKGS="libgflags-dev libprotobuf-dev libprotobuf-c0-dev protobuf-c-compiler libgoogle-perftools-dev protobuf-compiler"
 #HDFS_PKGS="libhdfs0 libhdfs0-dev"
 HDFS_PKGS=""
 MONO_PKGS="mono-mcs mono-xbuild mono-utils mono-runtime-sgen mono-runtime-common mono-runtime mono-mcs mono-dmcs mono-devel libmono-profiler mono-gmcs"
@@ -227,16 +227,12 @@ then
     echo_success
     echo
   else
-    get_dep_deb "google-gflags" "http://gflags.googlecode.com/files/libgflags0_${GFLAGS_VER}_${ARCH}.deb"
-    get_dep_deb "google-gflags" "http://gflags.googlecode.com/files/libgflags-dev_${GFLAGS_VER}_${ARCH}.deb"
     echo -n "libgflags not installed."
     echo_failure
-    echo "Please install libgflags0_${GFLAGS_VER}_${ARCH}.deb "
-    echo "and libgflags-dev_${GFLAGS_VER}_${ARCH}.deb from the ${EXT_DIR}/ directiory:"
+    echo "Please install the libgflags-dev package."
     echo
-    echo "$ cd ${EXT_DIR}"
-    echo "$ sudo dpkg -i libgflags0_${GFLAGS_VER}_${ARCH}.deb"
-    echo "$ sudo dpkg -i libgflags-dev_${GFLAGS_VER}_${ARCH}.deb"
+    # will bring in the other package via ddependency
+    echo "$ sudo apt-get install libgflags-dev"
     exit 1
  fi
 else
@@ -256,12 +252,13 @@ fi
 ## N.B.: This must go *after* gflags, since glog will notice that gflags is
 ## installed, and produce extra options (default flags like --logtostderr).
 print_subhdr "GOOGLE GLOG LIBRARY"
-GLOG_DIR=google-glog-svn
+GLOG_DIR=google-glog-git
 GLOG_INSTALL_FILE="/usr/lib/pkgconfig/libglog.pc"
+PKG_RES=$(dpkg-query -l | grep "libgoogle-glog-dev" 2>/dev/null)
 #GLOG_BUILD_DIR=${EXT_DIR}/google-glog-build
 #mkdir -p ${GLOG_BUILD_DIR}
-if [[ ${TARGET} == "scc" || ! -f ${GLOG_INSTALL_FILE} ]]; then
-  get_dep_svn "google-glog" "googlecode"
+if [[ ${TARGET} == "scc" || ( ${PKG_RES} == "" && ! -f ${GLOG_INSTALL_FILE} ) ]]; then
+  get_dep_git "google-glog" "https://github.com/google/glog"
   cd ${GLOG_DIR}
   echo -n "Building google-glog library..."
   if [[ ${TARGET} == "scc" ]]; then
