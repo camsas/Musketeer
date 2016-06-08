@@ -14,7 +14,15 @@ BASE_PKGS="wget subversion autoconf zlib1g-dev python-pip libcurl4-gnutls-dev li
 BOOST_PKGS="libboost-math-dev libboost-system-dev libboost-thread-dev libboost-regex-dev libboost-filesystem-dev libboost-program-options-dev libboost-iostreams-dev mpich2"
 ANTLR_PKGS="antlr3 libantlr3c-dev"
 CTEMPLATE_PKGS="libctemplate-dev"
-GOOGLE_PKGS="libgflags-dev libprotobuf-dev libprotobuf-c0-dev protobuf-c-compiler libgoogle-glog-dev libgoogle-perftools-dev protobuf-compiler"
+#set some libs depending on Ubuntu version
+LIBPROTOBUF="libprotobuf-c0-dev"
+OS_ID=$(lsb_release -i -s)
+OS_RELEASE=`lsb_release -r -s | awk '{split( $0, a, "."); print a[ 1]}'`
+if [ $OS_ID == "Ubuntu" -a $OS_RELEASE -gt 14 ]
+then
+	LIBPROTOBUF="libprotobuf-c-dev"
+fi
+GOOGLE_PKGS="libgflags-dev libprotobuf-dev $LIBPROTOBUF protobuf-c-compiler libgoogle-glog-dev libgoogle-perftools-dev protobuf-compiler"
 #HDFS_PKGS="libhdfs0 libhdfs0-dev"
 HDFS_PKGS=""
 MONO_PKGS="mono-mcs mono-xbuild mono-utils mono-runtime-sgen mono-runtime-common mono-runtime mono-mcs mono-dmcs mono-devel libmono-profiler mono-gmcs"
@@ -220,7 +228,7 @@ fi
 print_subhdr "GOOGLE GFLAGS LIBRARY"
 if [[ ${TARGET} != "scc" && ( ${OS_ID} == "Ubuntu" || ${OS_ID} == "Debian" ) ]];
 then
-  PKG_RES1=$(dpkg-query -l | grep "libgflags0" 2>/dev/null)
+  PKG_RES1=$(dpkg-query -l | grep "libgflags2" 2>/dev/null)
   PKG_RES2=$(dpkg-query -l | grep "libgflags-dev" 2>/dev/null)
   if [[ $PKG_RES1 != "" && $PKG_RES2 != "" ]]; then
     echo -n "Already installed."
