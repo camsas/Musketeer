@@ -560,6 +560,11 @@ namespace scheduling {
     for (uint32_t cur_jobs_exec = all_ops_ran; cur_jobs_exec > 0; ) {
       op_nodes nodes;
       LOG(INFO) << "Cur cost: " << cur_cost;
+      if (cur_cost >= FLAGS_max_scheduler_cost) {
+        LOG(FATAL) << "At least one operator could not be scheduled on any of"
+                   << "the available execution engines!";
+      }
+      CHECK(parent[cur_cost] != NULL);
       uint32_t prev_jobs_exec = parent[cur_cost][cur_jobs_exec];
       uint32_t jobs_merged = prev_jobs_exec ^ cur_jobs_exec;
       LOG(INFO) << "---------- Job boundary ----------";
