@@ -662,9 +662,12 @@ namespace scheduling {
         }
       }
     }
-    if (schedulable_ops == 0) {
+    if (min_cost == FLAGS_max_scheduler_cost) {
       // All the costs are maximum.
       optimal_num_jobs = 1;
+      LOG(ERROR) << "The cost of running the operators is maximum! This can "
+                 << "happen when the operators' input bounds are too big. "
+                 << "Defaulting to running in Spark.";
       scheduled_fmw[1][1] = FMW_SPARK;
     }
     schedulable_ops++;
